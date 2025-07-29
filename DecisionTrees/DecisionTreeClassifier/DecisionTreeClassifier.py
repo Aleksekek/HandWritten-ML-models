@@ -65,9 +65,10 @@ class MyTreeClf():
             return True
         if self.bins:
             for col in X:
-                for var in self.dividers[col]:
-                    if sum(X[col]>var)>0 and sum(X[col]<var)>0:
-                        return False
+                if type(self.dividers[col])!=bool:
+                    for var in self.dividers[col]:
+                        if sum(X[col]>var)>0 and sum(X[col]<var)>0:
+                            return False
             return True
         return False
     
@@ -192,6 +193,7 @@ class MyTreeClf():
 
     def print_tree(self):
         for layer in self.model:
-            print(f'{layer} - {self.model[layer]}')
+            if self.model[layer]:
+                print(f'{layer} - {self.model[layer]}')
         print(self.leafs_cnt)
         print(round(self.leaf_sum, 6))
