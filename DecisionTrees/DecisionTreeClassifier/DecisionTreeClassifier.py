@@ -72,16 +72,37 @@ class MyTreeClf():
         return False
     
 
+    def leafs_checker(self):
+        expected_leafs = {}
+        for depth_num, depth in self.model.items():
+            expected_leafs[depth_num] = 0
+            total_expected_leafs = 0
+            for split in depth:
+                if split == [0, 0]:
+                    continue
+                if isinstance(split, list):
+                    expected_leafs[depth_num] +=2
+                    if depth_num>1:
+                        expected_leafs[depth_num-1] -=1
+                else:
+                    expected_leafs[depth_num] -= 1
+            for _, leafs in expected_leafs.items():
+                total_expected_leafs+=leafs
+        return total_expected_leafs
+    
+
     def _split(self, X: pd.DataFrame, y: pd.Series, data: pd.Series, side: str, depth: int, verbose: bool, lif_t: int):
-        if not self._is_leaf(X[data], y[data]) and self.leafs_cnt < (self.max_leafs - 1 - lif_t) and depth < self.max_depth:
+        if not self._is_leaf(X[data], y[data]) and self.leafs_cnt + self.leafs_checker() + 1 <= self.max_leafs and depth < self.max_depth:
             if verbose:
                 print(side.lower(), len(X[data]), depth+1)
             self._splitter(X[data], y[data], verbose, depth, lif_t+1)
         else:
             if verbose:
                 print(f'\n{side} Done | size: {len(X[data])} | entrope: {self._entropy(y[data])} | depth: {depth+1} | val: {np.sum(y[data])/len(y[data])}\n')
-                self.leaf_sum += np.sum(y[data])/len(y[data])
+            self.leaf_sum += np.sum(y[data])/len(y[data])
             self.leafs_cnt += 1
+            if not self.model[depth+1]:
+                self.model[depth+1] = [[0, 0] for _ in range(2**(depth))]
             self.model[depth+1][2**(depth) - self.rest[depth+1]] = sum(y[data])/len(y[data])
             for i in range(self.max_depth - depth + 1):
                 self.rest[depth + i + 1] -= 2**i
@@ -89,6 +110,8 @@ class MyTreeClf():
 
     def _splitter(self, X, y, verbose, depth = 0, lif_t=-1):
         depth += 1
+        if not self.model[depth]:
+            self.model[depth] = [[0, 0] for _ in range(2**(depth-1))]
         split = self._get_best_split(X, y)
         self.model[depth][2**(depth-1) - self.rest[depth]] = list(split[:2])
         self.rest[depth] -= 1
@@ -135,7 +158,7 @@ class MyTreeClf():
         depth = 0
         while depth < self.max_depth + 1:
             depth += 1
-            self.model[depth] = [[0, 0] for _ in range(2**(depth-1))]
+            self.model[depth] = []
             self.rest[depth] = 2**(depth-1)
        
         self._splitter(X, y, verbose)
