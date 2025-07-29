@@ -3,10 +3,11 @@ import pandas as pd
 
 class MyTreeReg():
 
-    def __init__(self, max_depth = 5, min_samples_split = 2, max_leafs = 20):
+    def __init__(self, max_depth = 5, min_samples_split = 2, max_leafs = 20, bins: int = None):
         self.max_depth = max_depth
         self.min_samples_split = min_samples_split
         self.max_leafs = max_leafs
+        self.bins = bins
 
 
     def __repr__(self):
@@ -23,8 +24,11 @@ class MyTreeReg():
         max_gain = -1e15
 
         for col in X:
-            values = sorted(X[col].unique())
-            dividers = [(values[i]+values[i+1])/2 for i in range(len(values)-1)]
+            if self.dividers and type(self.dividers[col]) != bool:
+                dividers = self.dividers[col]
+            else:
+                values = sorted(X[col].unique())
+                dividers = [(values[i]+values[i+1])/2 for i in range(len(values)-1)]
 
             for divider in dividers:
                 split_right = y[X[col] > divider]
@@ -47,8 +51,16 @@ class MyTreeReg():
             return True
         if self._mse(y) == 0:
             return True
+        if self.bins:
+            for col in X:
+                if type(self.dividers[col])!=bool:
+                    for var in self.dividers[col]:
+                        if sum(X[col]>var)>0 and sum(X[col]<var)>0:
+                            return False
+            return True
         return False
     
+
     def leafs_checker(self):
         expected_leafs = {}
         for depth_num, depth in self.model.items():
@@ -109,6 +121,18 @@ class MyTreeReg():
         self.model = {}
         self.rest = {}
         self.leaf_sum = 0
+        self.dividers = {}
+
+        if self.bins:
+            self.dividers = {}
+            for col in X:
+                values = sorted(X[col].unique())
+                dividers = [(values[i]+values[i+1])/2 for i in range(len(values)-1)]
+                hists = np.histogram(X[col], self.bins)[1][1:-1]
+                if len(dividers) <= self.bins-1:
+                    self.dividers[col] = False
+                else:
+                    self.dividers[col] = hists
 
         depth = 0
         while depth < self.max_depth + 1:
@@ -119,8 +143,28 @@ class MyTreeReg():
         self._splitter(X, y, verbose)
 
 
+    def predict(self, X: pd.DataFrame):
+        X = X.copy()
+        y = []
+        for row in X.iterrows():
+            index = 0
+            for depth in range(1, self.max_depth+2):
+                if type(self.model[depth][index]) == type(y):
+                    col, val = self.model[depth][index][0], self.model[depth][index][1]
+                    if row[1][col] <= val:
+                        index *= 2
+                    else:
+                        index *= 2
+                        index += 1
+                else:
+                    y.append(self.model[depth][index])
+                    break
+        return pd.Series(y)
+
+
     def print_tree(self):
         for layer in self.model:
-            print(f'{layer} - {self.model[layer]}')
+            if self.model[layer]:
+                print(f'{layer} - {self.model[layer]}')
         print(self.leafs_cnt)
         print(round(self.leaf_sum, 6))
