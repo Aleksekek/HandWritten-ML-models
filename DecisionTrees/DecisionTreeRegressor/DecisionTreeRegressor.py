@@ -109,6 +109,8 @@ class MyTreeReg():
         left = X[split[0]] <= split[1]
         right = X[split[0]] > split[1]
 
+        self.fi[split[0]] += (len(X)/self.len_X) * (self._mse(y) - len(y[left])/len(X)*self._mse(y[left]) - len(y[right])/len(X)*self._mse(y[right]))
+        
         self._split(X, y, left, 'Left', depth, verbose)
 
         self._split(X, y, right, 'Right', depth, verbose)
@@ -122,6 +124,8 @@ class MyTreeReg():
         self.rest = {}
         self.leaf_sum = 0
         self.dividers = {}
+        self.fi = {}
+        self.len_X = len(X)
 
         if self.bins:
             self.dividers = {}
@@ -133,6 +137,9 @@ class MyTreeReg():
                     self.dividers[col] = False
                 else:
                     self.dividers[col] = hists
+
+        for col in X:
+            self.fi[col] = 0
 
         depth = 0
         while depth < self.max_depth + 1:
@@ -160,6 +167,10 @@ class MyTreeReg():
                     y.append(self.model[depth][index])
                     break
         return pd.Series(y)
+
+
+    def feature_importances_(self):
+        return self.fi
 
 
     def print_tree(self):

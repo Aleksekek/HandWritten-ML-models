@@ -189,6 +189,10 @@ class MyTreeClf():
         y_proba = self.predict_proba(X)
         y = y_proba.apply(lambda x: 1 if x > 0.5 else 0)
         return y
+    
+
+    def feature_importances_(self):
+        return self.fi
 
 
     def print_tree(self):
