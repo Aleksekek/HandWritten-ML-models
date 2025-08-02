@@ -53,6 +53,16 @@ class MyForestReg():
             self.leafs_cnt += tree.leafs_cnt
             self.models.append(tree)
 
+    
+    def predict(self, X: pd.DataFrame):
+        X = X.copy()
+        preds = None
+        for tree in self.models:
+            if not isinstance(preds, pd.Series):
+                preds = tree.predict(X)
+            else:
+                preds += tree.predict(X)
+        return preds/len(self.models)
 
 
 class MyTreeReg():
